@@ -166,26 +166,20 @@ def getLookUp(words):
     lookup.build()
     return lookup
 
-# nouns_lookup = getLookUp(words)
-
-# print(nouns_lookup.nearest(vec("happy")))
-
-# words = "Hello I am good"
-
+types = dict()
+for word in words:
+    if word.pos_ not in types:
+        types[word.pos_] = getWordsByPos(word.pos_)
+    if word.tag_ not in types:
+        types[word.tag_] = getWordsByTag(word.tag_)
+for entity in entities:
+    if entity.label_ not in types:
+        types[entity.label_] = getEntitiesByLabel(entity.label_)
 
 lookups = dict()
-for word in words:
-    if word.pos_ not in lookups:
-        lookups[word.pos_] = getWordsByPos(word.pos_)
-    if word.tag_ not in lookups:
-        lookups[word.tag_] = getWordsByTag(word.tag_)
-for entity in entities:
-    if entity.label_ not in lookups:
-        lookups[entity.label_] = getEntitiesByLabel(entity.label_)
 
-
-for key, words in lookups.items():
-  lookups[key] = getLookUp(words)
+for key, item in types.items():
+  lookups[key] = getLookUp(item)
 
 output = []
 
@@ -193,12 +187,13 @@ for word in words:
     nearest = lookups[word.pos_].nearest(word.vector)
     if len(nearest) > 1:
         new_word = nearest[1]
-        output.append(new_word.text)
+        output.append(new_word)
     else:
         output.append(word.text)
     output.append(word.whitespace_)
-print(''.join(output))
 
+
+print("".join(output))
 
 
 

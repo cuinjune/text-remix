@@ -178,7 +178,6 @@ for w in words:
 for e in entities:
     if e.label_ not in entityWords:
         ents = getEntitiesByLabel(e.label_)
-        newEnts = [ent for ent in ents if ent.text]
         entityWords[e.label_] = getEntitiesByLabel(e.label_)
 
 posLookUps = dict()

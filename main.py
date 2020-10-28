@@ -1,8 +1,9 @@
 def getFilenameFromSysArg():
     import sys
     if len(sys.argv) == 1:
-        print("Error: Please pass the filename or URL as an argument.")
-        exit()
+        # print("Error: Please pass the filename or URL as an argument.")
+        # exit()
+        return "frost.txt"
     else:
         return sys.argv[1]
 
@@ -58,7 +59,7 @@ from simpleneighbors import SimpleNeighbors
 
 # extract text units
 sentences = list(doc.sents)
-words = [w for w in list(doc)]
+words = [w for w in list(doc) if w.is_alpha]
 nounChunks = list(doc.noun_chunks)
 entities = list(doc.ents)
 
@@ -83,7 +84,6 @@ xs = getWordsByPos("X")  # email, foreign word, unknown
 # tag
 def getWordsByTag(tag, words=words):
     return [w for w in words if w.tag_ == tag]
-
 
 # nouns
 def getNounsByTag(tag):
@@ -156,44 +156,57 @@ quantity = getEntitiesByLabel("QUANTITY")  # miles, pounds
 ordinal = getEntitiesByLabel("ORDINAL")  # first, second
 cardinal = getEntitiesByLabel("CARDINAL")  # one, two
 
-
 def getLookUp(words):
-    lookup = SimpleNeighbors(numDimensions())
-    for word in words:
-        # .corpus of the lookup lets us determine if the word has already been added
-        if word.text.lower() not in lookup.corpus:
-            lookup.add_one(word.text.lower(), word.vector)
-    lookup.build()
-    return lookup
+    lookUp = SimpleNeighbors(numDimensions())
+    for w in words:
+        # .corpus of the lookUp lets us determine if the word has already been added
+        if w.text.lower() not in lookUp.corpus:
+            lookUp.add_one(w.text.lower(), w.vector)
+    lookUp.build()
+    return lookUp
 
-types = dict()
-for word in words:
-    if word.pos_ not in types:
-        types[word.pos_] = getWordsByPos(word.pos_)
-    if word.tag_ not in types:
-        types[word.tag_] = getWordsByTag(word.tag_)
-for entity in entities:
-    if entity.label_ not in types:
-        types[entity.label_] = getEntitiesByLabel(entity.label_)
+posWords = dict()
+tagWords = dict()
+entityWords = dict()
 
-lookups = dict()
+for w in words:
+    if w.pos_ in ["NOUN", "PROPN", "VERB", "ADJ", "ADV", "NUM"] and w.pos_ not in posWords:
+        posWords[w.pos_] = getWordsByPos(w.pos_)
+    if w.tag_ in ["NN", "NNS", "NNP", "NNPS", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ", "MD", "AFX", "JJ", "JJR", "JJS", "RB", "RBR", "RBS"] and w.tag_ not in tagWords:
+        tagWords[w.tag_] = getWordsByTag(w.tag_)
 
-for key, item in types.items():
-  lookups[key] = getLookUp(item)
+for e in entities:
+    if e.label_ not in entityWords:
+        ents = getEntitiesByLabel(e.label_)
+        newEnts = [ent for ent in ents if ent.text]
+        entityWords[e.label_] = getEntitiesByLabel(e.label_)
+
+posLookUps = dict()
+tagLookUps = dict()
+entityLookUps = dict()
+
+for p, w in posWords.items():
+  posLookUps[p] = getLookUp(w)
+
+for t, w in tagWords.items():
+  tagLookUps[t] = getLookUp(w)
+
+for e, w in entityWords.items(): # How can I use the entityLookUps below?
+  entityLookUps[e] = getLookUp(w)
 
 output = []
 
-for word in words:
-    nearest = lookups[word.pos_].nearest(word.vector)
-    if len(nearest) > 1:
-        new_word = nearest[1]
-        output.append(new_word)
+for w in words:
+    if w.tag_ in tagLookUps:
+        nearests = list(set(tagLookUps[w.tag_].nearest(w.vector))) # unique nearest words
+        nearest = nearests[nearests.index(w.text.lower()) - 1] # next possible nearest word
+        output.append(nearest)    
+    elif w.pos_ in posLookUps:
+        nearests = list(set(posLookUps[w.pos_].nearest(w.vector))) # unique nearest words
+        nearest = nearests[nearests.index(w.text.lower()) - 1] # next possible nearest word
+        output.append(nearest)    
     else:
-        output.append(word.text)
-    output.append(word.whitespace_)
-
+        output.append(w.text)
+    output.append(w.whitespace_)
 
 print("".join(output))
-
-
-
